@@ -1,15 +1,61 @@
-import React, {ReactElement} from 'react';
+import React, {ReactElement, useRef, useState} from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  PressableStateCallbackType,
   StyleSheet,
   Text,
   TextInput,
 } from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import {MainStackNavigationProp} from '../Navigation';
+import restAPI, {API_ENDPOINTS_TYPE, registerUser} from '../axiosConfig';
+import {AxiosError, AxiosResponse} from 'axios';
+import {setGenericPassword} from 'react-native-keychain';
 
 const SignUpScreen = (): ReactElement => {
+  const passwordInputRef = useRef<TextInput>(null);
+  const [username, setUsername] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const navigation = useNavigation<MainStackNavigationProp>();
+
+  const onLoginChangeText = (login: string) => setUsername(login);
+
+  const onPasswordChangeText = (password: string) => setPassword(password);
+
+  const onLoginSubmitEditing = () => passwordInputRef.current?.focus();
+
+  const onSignInPress = () => navigation.navigate('SignIn');
+
+  const onSignUpPress = () => {
+    setIsLoading(true);
+    registerUser({username, password})
+      .then(
+        (
+          response: AxiosResponse<API_ENDPOINTS_TYPE['REGISTER']['SUCCESS']>,
+        ) => {
+          setGenericPassword(username, response.data.user.token);
+          restAPI.defaults.headers.common['Authorization'] =
+            response.data.user.token;
+          navigation.navigate('Search');
+        },
+      )
+      .catch((error: AxiosError<API_ENDPOINTS_TYPE['REGISTER']['ERROR']>) =>
+        Alert.alert('Error', error.response?.data.message),
+      )
+      .finally(() => setIsLoading(false));
+  };
+
+  const buttonStyle = ({pressed}: PressableStateCallbackType) => [
+    styles.submitButton,
+    pressed && Platform.OS === 'ios' ? styles.submitButtonOpacity : null,
+  ];
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -18,44 +64,50 @@ const SignUpScreen = (): ReactElement => {
         <Text style={styles.title}>Hello There!</Text>
         <TextInput
           style={styles.textInput}
-          placeholder={'login'}
-          autoComplete={'username-new'}
+          placeholder={'username'}
+          autoComplete={'username'}
           textContentType={'username'}
           returnKeyType={'next'}
+          onChangeText={onLoginChangeText}
+          value={username}
+          onSubmitEditing={onLoginSubmitEditing}
         />
         <TextInput
           style={styles.textInput}
           placeholder={'password'}
           secureTextEntry={true}
-          autoComplete={'password-new'}
-          textContentType={'newPassword'}
+          autoComplete={'password'}
+          textContentType={'password'}
           returnKeyType={'send'}
+          onChangeText={onPasswordChangeText}
+          value={password}
+          ref={passwordInputRef}
+          onSubmitEditing={onSignUpPress}
         />
         <Pressable
-          style={({pressed}) => [
-            styles.submitButton,
-            pressed && Platform.OS === 'ios'
-              ? styles.submitButtonOpacity
-              : null,
-          ]}
+          style={buttonStyle}
           android_ripple={{
             color: 'light-grey',
             borderless: false,
-          }}>
+          }}
+          onPress={onSignUpPress}>
           <Text>Sign Up</Text>
+          {isLoading ? (
+            <ActivityIndicator
+              size={'small'}
+              color={'black'}
+              style={{position: 'absolute', right: 10}}
+            />
+          ) : null}
         </Pressable>
         <Text style={styles.loginText}>or if you already have account</Text>
         <Pressable
-          style={({pressed}) => [
-            styles.submitButton,
-            pressed && Platform.OS === 'ios'
-              ? styles.submitButtonOpacity
-              : null,
-          ]}
+          style={buttonStyle}
           android_ripple={{
             color: 'light-grey',
             borderless: false,
-          }}>
+          }}
+          onPress={onSignInPress}>
           <Text>Sign In</Text>
         </Pressable>
       </Pressable>
@@ -90,6 +142,7 @@ const styles = StyleSheet.create({
   submitButton: {
     width: '100%',
     height: 40,
+    flexDirection: 'row',
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
