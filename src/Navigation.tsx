@@ -1,5 +1,4 @@
 import React, {ReactElement} from 'react';
-import {View} from 'react-native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {NavigationContainer} from '@react-navigation/native';
 import SignUpScreen from './screens/SignUpScreen';
@@ -12,7 +11,11 @@ const MainStack = createNativeStackNavigator();
 const Navigation = (): ReactElement => {
   return (
     <NavigationContainer>
-      <MainStack.Navigator>
+      <MainStack.Navigator
+        screenOptions={{
+          title: 'Book Discovery',
+          headerTitleAlign: 'center',
+        }}>
         <MainStack.Screen name="SignUpScreen" component={SignUpScreen} />
         <MainStack.Screen name="SignInScreen" component={SignInScreen} />
         <MainStack.Screen name="SearchScreen" component={SearchScreen} />
